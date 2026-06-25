@@ -77,6 +77,8 @@ with col_img:
     else:
         st.info("Carica le tue immagini nel pannello laterale a sinistra per iniziare.")
 
+# ... (lascia intatta tutta la parte superiore fino a with col_map:) ...
+
 with col_map:
     st.subheader("2. Mappa di Riferimento")
     
@@ -84,6 +86,26 @@ with col_map:
     layer_name = st.text_input("Nome Layer", placeholder="es. ortofoto")
     
     m = folium.Map(location=[40.6285, 16.9405], zoom_start=14)
+    
+    # 1. STRUMENTO DI RICERCA (Geocoder Nominatim integrato)
+    from folium.plugins import Geocoder
+    Geocoder().add_to(m)
+
+    # 2. STRUMENTO POLIGONO E RETTANGOLO (Draw)
+    from folium.plugins import Draw
+    draw = Draw(
+        export=False,
+        position='topleft',
+        draw_options={
+            'polyline': False,
+            'polygon': True,
+            'circle': False,
+            'marker': False,
+            'circlemarker': False,
+            'rectangle': True,
+        }
+    )
+    m.add_child(draw)
     
     if wms_url and layer_name:
         folium.WmsTileLayer(
@@ -95,4 +117,10 @@ with col_map:
         ).add_to(m)
         folium.LayerControl().add_to(m)
 
-    st_folium(m, width=700, height=500, key="map")
+    # st_folium cattura ora anche i poligoni che disegni
+    map_data = st_folium(m, width=700, height=500, key="map")
+    
+    # 3. FEEDBACK VISIVO: Verifichiamo se l'utente ha disegnato qualcosa
+    if map_data and map_data.get("all_drawings"):
+        numero_vertici = len(map_data['all_drawings'][0]['geometry']['coordinates'][0])
+        st.success(f"Area delimitata correttamente! Poligono con {numero_vertici} vertici registrato in memoria.")
